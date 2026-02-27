@@ -3,29 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>心晴打卡</title>
+    <title>心晴记录</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 核心自适应：使用 100dvh 确保在移动端浏览器不会被地址栏遮挡底部 */
         body { 
             -webkit-tap-highlight-color: transparent; 
             font-family: system-ui, sans-serif; 
             background-color: #FDFBF7; 
             color: #4A4A4A; 
             height: 100dvh; 
-            overflow: hidden; 
+            /* 禁止全局左右滑动 */
+            overflow-x: hidden; 
         }
         .app-container {
             height: 100dvh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         .scroll-area {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
-            padding-bottom: 120px; /* 确保内容不会被底部导航挡住 */
+            padding-bottom: 120px;
         }
         .page { display: none; animation: fadeIn 0.2s ease; }
         .page-active { display: block !important; }
@@ -38,16 +40,16 @@
         .tag-btn.active { background-color: #7B8B6F; color: white; border-color: #7B8B6F; }
 
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(255,255,255,0.9); backdrop-filter: blur(15px); border-top: 1px solid #f0f0f0; display: flex; justify-content: space-around; align-items: center; z-index: 9999; max-width: 448px; margin: 0 auto; }
-        /* 放大 Tab 签图标 */
         .nav-item img { width: 32px; height: 32px; filter: grayscale(1) opacity(0.2); transition: 0.3s; }
         .nav-item.tab-active img { filter: grayscale(0) opacity(1); }
         .nav-item span { font-size: 10px; color: #BBB; margin-top: 5px; font-weight: 600; }
         .nav-item.tab-active span { color: #7B8B6F; }
 
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        .calendar-day { aspect-ratio: 1/1.1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.6); }
-        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 28px; border-radius: 30px; z-index: 10000; opacity: 0; pointer-events: none; transition: 0.3s; }
+        /* 月历布局修正：确保不溢出 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; width: 100%; }
+        .calendar-day { aspect-ratio: 1/1.1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.6); position: relative; overflow: hidden; }
         
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 28px; border-radius: 30px; z-index: 10000; opacity: 0; pointer-events: none; transition: 0.3s; }
         .record-card { -webkit-touch-callout: none !important; -webkit-user-select: none !important; user-select: none !important; touch-action: pan-y; }
     </style>
 </head>
@@ -56,13 +58,13 @@
     <div id="toast" class="toast">记录成功 ❤️</div>
 
     <div class="app-container max-w-md mx-auto relative bg-[#FDFBF7]">
-        <header class="p-6 pt-8 pb-2">
+        <header class="p-6 pt-8 pb-0">
             <h1 class="text-2xl font-bold text-[#444]">今天过的好吗？</h1>
-            <p class="text-xs text-gray-400 mt-1">记录此刻</p>
+            <p class="text-xs text-gray-400 mt-1 mb-4">记录此刻</p>
         </header>
 
         <div class="scroll-area">
-            <main id="inputPage" class="page page-active p-6 space-y-6">
+            <main id="inputPage" class="page page-active p-6 pt-2 space-y-6">
                 <div class="grid grid-cols-5 gap-2">
                     <button onclick="selectMood(this, 'happy.png', 'pos', 5)" class="mood-btn flex flex-col items-center py-5 rounded-[2.5rem] bg-white shadow-sm">
                         <img src="happy.png" class="w-10 h-10 mb-2"><span class="text-[10px] text-gray-400 font-bold">开心</span>
@@ -96,12 +98,12 @@
                     <button onclick="toggleView('cal')" id="v-cal" class="flex-1 py-2 rounded-xl text-xs font-bold text-gray-400">月历</button>
                 </div>
                 <div id="listView" class="space-y-4"></div>
-                <div id="calendarView" class="hidden">
-                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm">
-                        <div class="flex justify-between items-center mb-8 font-bold text-gray-700">
-                            <button onclick="changeMonth(-1)">‹</button>
+                <div id="calendarView" class="hidden overflow-hidden">
+                    <div class="bg-white p-4 rounded-[2.5rem] shadow-sm">
+                        <div class="flex justify-between items-center mb-6 font-bold text-gray-700 px-2">
+                            <button onclick="changeMonth(-1)" class="p-2">‹</button>
                             <span id="calLabel">2026 / 02</span>
-                            <button onclick="changeMonth(1)">›</button>
+                            <button onclick="changeMonth(1)" class="p-2">›</button>
                         </div>
                         <div class="calendar-grid text-[10px] text-gray-300 font-bold text-center mb-4">
                             <div>周日</div><div>周一</div><div>周二</div><div>周三</div><div>周四</div><div>周五</div><div>周六</div>
@@ -127,247 +129,4 @@
         </div>
 
         <nav class="bottom-nav">
-            <button onclick="showPage('input')" id="tab-input" class="nav-item tab-active"><img src="note.png"><span>记录</span></button>
-            <button onclick="showPage('list')" id="tab-list" class="nav-item"><img src="cal.png"><span>历程</span></button>
-            <button onclick="showPage('stats')" id="tab-stats" class="nav-item"><img src="reading.png"><span>分析</span></button>
-        </nav>
-    </div>
-
-    <script>
-        const moodConfig = {
-            5: { name: '开心', img: 'happy.png', color: '#f8f37b' },
-            4: { name: '平静', img: 'calm.png', color: '#cadc86' },
-            3: { name: '不开心', img: 'unhappy.png', color: '#9bdd85' },
-            2: { name: '焦虑', img: 'anxious.png', color: '#aed6ef' },
-            1: { name: '痛苦', img: 'tired.png', color: '#b9b4f7' }
-        };
-
-        const tagsData = {
-            pos: ["专注", "成就感", "想社交", "精力充沛", "内心平静", "睡得好", "运动了", "吃到美食", "效率高", "被表扬"],
-            neg: ["失眠", "极度疲劳", "食欲减退", "无助感", "绝望", "注意力涣散", "想一个人待着", "哭泣", "拖延", "压力大"]
-        };
-
-        const DB_KEY = 'mood_final_clean_v3'; 
-        let records = JSON.parse(localStorage.getItem(DB_KEY)) || [];
-        let curImg = '', curVal = 0, curTags = new Set(), calDate = new Date(), moodChart = null;
-        let touchTimer = null;
-        const iconCache = {};
-
-        async function preloadIcons() {
-            for (const val in moodConfig) {
-                if (!iconCache[val]) {
-                    const img = new Image();
-                    img.src = moodConfig[val].img;
-                    await new Promise(r => img.onload = r);
-                    iconCache[val] = img;
-                }
-            }
-        }
-
-        window.selectMood = function(btn, img, type, value) {
-            curImg = img; curVal = value; curTags.clear();
-            document.querySelectorAll('.mood-btn').forEach(b => { 
-                b.classList.remove('active'); b.style.borderColor = 'transparent'; 
-            });
-            btn.classList.add('active'); 
-            btn.style.borderColor = moodConfig[value].color;
-            
-            document.getElementById('tagSection').classList.remove('hidden');
-            const container = document.getElementById('tagContainer');
-            container.innerHTML = tagsData[type].map(t => `<button onclick="toggleTag(this, '${t}')" class="tag-btn">${t}</button>`).join('');
-        };
-
-        window.toggleTag = function(btn, tag) {
-            if(curTags.has(tag)) { curTags.delete(tag); btn.classList.remove('active'); }
-            else { curTags.add(tag); btn.classList.add('active'); }
-        };
-
-        window.saveMood = function() {
-            if(!curImg) return;
-            const now = new Date();
-            records.unshift({
-                id: Date.now(), img: curImg, val: curVal, 
-                note: document.getElementById('customNote').value,
-                tags: Array.from(curTags),
-                fullDate: now.toLocaleDateString(),
-                displayTime: `${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`,
-                y: now.getFullYear(), m: now.getMonth(), d: now.getDate()
-            });
-            localStorage.setItem(DB_KEY, JSON.stringify(records));
-            document.getElementById('toast').style.opacity = '1';
-            setTimeout(() => { document.getElementById('toast').style.opacity = '0'; showPage('list'); resetForm(); }, 800);
-        };
-
-        function resetForm() {
-            curImg = ''; curVal = 0; curTags.clear();
-            document.getElementById('customNote').value = '';
-            document.getElementById('tagSection').classList.add('hidden');
-            document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
-        }
-
-        window.showPage = function(p) {
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('page-active'));
-            document.getElementById(p + 'Page').classList.add('page-active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('tab-active'));
-            document.getElementById('tab-' + p).classList.add('tab-active');
-            if(p === 'list') renderList();
-            if(p === 'stats') { renderStats(); setTimeout(initChart, 200); }
-        };
-
-        window.startDeleteTimer = function(id) {
-            touchTimer = setTimeout(() => {
-                if(confirm('要删除这条记录吗？')) {
-                    records = records.filter(r => r.id !== id);
-                    localStorage.setItem(DB_KEY, JSON.stringify(records));
-                    renderList();
-                }
-            }, 800);
-        };
-
-        window.clearDeleteTimer = function() {
-            clearTimeout(touchTimer);
-        };
-
-        function renderList() {
-            const v = document.getElementById('listView');
-            if(!records.length) { 
-                v.innerHTML = `<div class="flex flex-col items-center justify-center py-32 opacity-20"><img src="empty.png" class="w-16 h-16 mb-4"><p class="text-sm font-bold tracking-widest">暂无记录，去记录今天吧</p></div>`; 
-                return; 
-            }
-            v.innerHTML = records.map(r => `
-                <div class="record-card bg-white p-6 rounded-[2rem] flex gap-5 shadow-sm mb-4" 
-                     ontouchstart="startDeleteTimer(${r.id})" 
-                     ontouchend="clearDeleteTimer()"
-                     onmousedown="startDeleteTimer(${r.id})"
-                     onmouseup="clearDeleteTimer()">
-                    <img src="${r.img}" class="w-10 h-10">
-                    <div class="flex-1">
-                        <div class="flex justify-between mb-2">
-                            <span class="font-bold text-gray-700 text-sm">${moodConfig[r.val].name}</span>
-                            <span class="text-[9px] text-gray-300 font-bold">${r.displayTime}</span>
-                        </div>
-                        <div class="flex flex-wrap gap-1 mb-2">${r.tags.map(t=>`<span class="text-[8px] bg-gray-50 px-2 py-0.5 rounded-full text-gray-400">${t}</span>`).join('')}</div>
-                        <p class="text-gray-500 text-[13px]">${r.note || ''}</p>
-                    </div>
-                </div>`).join('');
-        }
-
-        window.toggleView = function(t) {
-            const isList = t === 'list';
-            document.getElementById('listView').style.display = isList ? 'block' : 'none';
-            document.getElementById('calendarView').classList.toggle('hidden', isList);
-            const vList = document.getElementById('v-list');
-            const vCal = document.getElementById('v-cal');
-            if(isList) {
-                vList.className = "flex-1 py-2 rounded-xl text-xs font-bold bg-white shadow-sm";
-                vCal.className = "flex-1 py-2 rounded-xl text-xs font-bold text-gray-400";
-            } else {
-                vCal.className = "flex-1 py-2 rounded-xl text-xs font-bold bg-white shadow-sm";
-                vList.className = "flex-1 py-2 rounded-xl text-xs font-bold text-gray-400";
-                renderCalendar();
-            }
-        };
-
-        function renderCalendar() {
-            const y = calDate.getFullYear(), m = calDate.getMonth();
-            document.getElementById('calLabel').innerText = `${y} / ${(m+1).toString().padStart(2,'0')}`;
-            const first = new Date(y, m, 1).getDay(), days = new Date(y, m+1, 0).getDate();
-            const container = document.getElementById('calDays'); container.innerHTML = '';
-            for(let i=0; i<first; i++) container.innerHTML += '<div></div>';
-            for(let d=1; d<=days; d++) {
-                const dayRecs = records.filter(r => r.y === y && r.m === m && r.d === d);
-                container.innerHTML += `<div class="calendar-day">
-                    <span class="text-[9px] mb-1 ${dayRecs.length?'text-gray-500 font-bold':'text-gray-200'}">${d}</span>
-                    ${dayRecs.length?`<img src="${moodConfig[dayRecs[0].val].img}" class="w-6 h-6">`:''}
-                </div>`;
-            }
-        }
-
-        window.changeMonth = (s) => { calDate.setMonth(calDate.getMonth() + s); renderCalendar(); };
-
-        async function initChart() {
-            const canvas = document.getElementById('moodChart');
-            if(!canvas) return;
-            if(moodChart) moodChart.destroy();
-            await preloadIcons();
-            const range = parseInt(document.getElementById('chartRange').value);
-            const labels = []; const dataPoints = []; const now = new Date();
-            for(let i=range-1; i>=0; i--) {
-                const d = new Date(); d.setDate(now.getDate() - i);
-                labels.push(`${d.getMonth()+1}/${d.getDate()}`);
-                const dRecs = records.filter(r => r.fullDate === d.toLocaleDateString());
-                dataPoints.push(dRecs.length > 0 ? dRecs.reduce((s, r) => s + r.val, 0) / dRecs.length : null);
-            }
-            moodChart = new Chart(canvas.getContext('2d'), {
-                type: 'line',
-                data: { labels, datasets: [{ data: dataPoints, borderColor: '#7B8B6F', borderWidth: 2, tension: 0.4, spanGaps: true, pointRadius: 5, pointBackgroundColor: '#7B8B6F' }] },
-                plugins: [{
-                    id: 'customIcons',
-                    beforeDatasetsDraw(chart) {
-                        const { ctx, scales: { y } } = chart;
-                        ctx.save();
-                        ctx.clip = () => {}; 
-                        y.ticks.forEach((tick, index) => {
-                            const img = iconCache[tick.value];
-                            if (img) {
-                                const yPos = y.getPixelForTick(index);
-                                ctx.drawImage(img, y.left - 42, yPos - 11, 22, 22);
-                            }
-                        });
-                        ctx.restore();
-                    }
-                }],
-                options: { 
-                    responsive: true, maintainAspectRatio: false,
-                    layout: { padding: { left: 50, right: 15, top: 10, bottom: 0 } },
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } }, 
-                    scales: { 
-                        y: { min: 1, max: 5, ticks: { stepSize: 1, display: false }, grid: { color: '#F8F8F8', drawBorder: false } }, 
-                        x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#CCC' } } 
-                    } 
-                }
-            });
-        }
-
-        function renderStats() {
-            const total = records.length;
-            const counts = records.reduce((acc, r) => { acc[r.val] = (acc[r.val] || 0) + 1; return acc; }, {});
-            const tagMap = {};
-            records.forEach(r => r.tags.forEach(t => tagMap[t] = (tagMap[t] || 0) + 1));
-            const topTags = Object.entries(tagMap).sort((a,b) => b[1]-a[1]).slice(0, 6);
-
-            let html = `
-                <div class="bg-white p-10 text-center rounded-[2.5rem] shadow-sm">
-                    <p class="text-[10px] text-gray-300 mb-2 tracking-widest uppercase">累计记录</p>
-                    <p class="text-6xl font-black text-[#7B8B6F]">${total}</p>
-                </div>
-                
-                <div class="bg-white p-6 rounded-[2.5rem] shadow-sm mt-4">
-                    <p class="text-[10px] text-gray-300 mb-4 font-bold tracking-widest">高频关键词</p>
-                    <div class="flex flex-wrap gap-2">
-                        ${topTags.length ? topTags.map(([tag, count]) => `
-                            <div class="bg-gray-50 px-4 py-2 rounded-full flex items-center gap-2">
-                                <span class="text-xs text-gray-600 font-bold">${tag}</span>
-                                <span class="text-[10px] text-[#7B8B6F] font-black">${count}</span>
-                            </div>
-                        `).join('') : '<p class="text-xs text-gray-300 w-full text-center py-4">暂无数据</p>'}
-                    </div>
-                </div>
-
-                <div class="space-y-3 mt-6">`;
-            
-            [5, 4, 3, 2, 1].forEach(v => {
-                const count = counts[v] || 0;
-                const percent = total > 0 ? Math.round((count / total) * 100) : 0;
-                html += `<div class="bg-white p-5 rounded-[2rem] flex justify-between items-center shadow-sm">
-                        <div class="flex items-center gap-4"><img src="${moodConfig[v].img}" class="w-8 h-8"><span class="font-bold text-gray-600 text-sm">${moodConfig[v].name}</span></div>
-                        <div class="text-right"><span class="font-black text-[#7B8B6F] text-lg">${count} <span class="text-[10px] text-gray-400 font-normal">次</span></span><div class="text-[10px] text-gray-300 font-bold">${percent}%</div></div>
-                    </div>`;
-            });
-            document.getElementById('statsInfo').innerHTML = html + `</div>`;
-        }
-
-        window.onload = async () => { await preloadIcons(); showPage('input'); };
-    </script>
-</body>
-</html>
+            <button
